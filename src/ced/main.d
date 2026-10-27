@@ -20,6 +20,7 @@ import std.stdio : stderr;
 import std.utf : UTFException;
 import ced.keys;
 import ced.terminal;
+import ced.commands;
 
 enum tabStop = 4;
 
@@ -95,38 +96,40 @@ final class Editor {
         quitPending = false;
         message = null;
 
-        switch (key) {
-            case altFlag | 'q', altFlag | 'Q', ctrl('q'):
-                if (dirty && !confirmQuit)
-                {
+        const Cmd* cmd = key in defaultKeymap;
+        if (cmd is null) {
+            // Unbound printable characters are typed; other control and Alt keys are ignored.
+            if (key >= 0x20 && key != 0x7F && key < 0x110000) insertChar(cast(dchar) key);
+            return;
+        }
+
+        final switch (*cmd) {
+            case Cmd.quit:
+                if (dirty && !confirmQuit) {
                     message = "Unsaved changes, Alt+q again to quit without saving, Alt+s to save.";
                     quitPending = true;
-                }
-                else
+                } else {
                     running = false;
+                }
                 break;
-            case altFlag | 's', altFlag | 'S', ctrl('s'):
+            case Cmd.save:
                 save();
                 break;
-            case '\r': // Enter arrives as CR because ICRNL is off
+            case Cmd.newline:
                 insertNewline();
                 break;
-            case 0x7F, ctrl('h'): // Backspace
+            case Cmd.deleteBack:
                 deleteBack();
                 break;
-            case keyDelete:
+            case Cmd.deleteForward:
                 deleteForward();
                 break;
-            case keyLeft, keyRight, keyUp, keyDown, keyHome, keyEnd, keyPageUp, keyPageDown:
-                moveCursor(key);
+            case Cmd.cursorLeft, Cmd.cursorRight, Cmd.cursorUp, Cmd.cursorDown,
+                 Cmd.lineStart, Cmd.lineEnd, Cmd.pageUp, Cmd.pageDown:
+                moveCursor(*cmd);
                 break;
-            case '\t':
+            case Cmd.insertTab:
                 insertChar('\t');
-                break;
-            default:
-                // Printable characters only; other control and Alt keys are ignored.
-                if (key >= 0x20 && key != 0x7F && key < 0x110000)
-                    insertChar(cast(dchar) key);
                 break;
         }
     }
@@ -175,16 +178,16 @@ final class Editor {
         dirty = true;
     }
 
-    void moveCursor(int key) {
-        switch (key) {
-            case keyLeft:
+    void moveCursor(Cmd cmd) {
+        switch (cmd) {
+            case Cmd.cursorLeft:
                 if (cx > 0) {
                     cx--;
                 } else if (cy > 0) {
                     cx = lines[--cy].length;
                 }
                 break;
-            case keyRight:
+            case Cmd.cursorRight:
                 if (cx < lines[cy].length) {
                     cx++;
                 } else if (cy + 1 < lines.length) {
@@ -192,22 +195,22 @@ final class Editor {
                     cx = 0;
                 }
                 break;
-            case keyUp:
+            case Cmd.cursorUp:
                 if (cy > 0) cy--;
                 break;
-            case keyDown:
+            case Cmd.cursorDown:
                 if (cy + 1 < lines.length) cy++;
                 break;
-            case keyHome:
+            case Cmd.lineStart:
                 cx = 0;
                 break;
-            case keyEnd:
+            case Cmd.lineEnd:
                 cx = lines[cy].length;
                 break;
-            case keyPageUp:
+            case Cmd.pageUp:
                 cy = cy > screenRows ? cy - screenRows : 0;
                 break;
-            case keyPageDown:
+            case Cmd.pageDown:
                 cy = min(cy + screenRows, lines.length - 1);
                 break;
             default:

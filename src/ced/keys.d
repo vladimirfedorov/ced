@@ -6,7 +6,10 @@ enum: int {
     keyNone = -1,
     keyLeft = 0x110000, keyRight, keyUp, keyDown,
     keyHome, keyEnd, keyPageUp, keyPageDown, keyDelete,
+    
     altFlag = 0x200000, // OR-ed with the character for Alt+key
+    ctrlMask =  0x1f    // AND-mask for Ctrl+key
 }
 
-int ctrl(char c) { return c & 0x1f; }
+int ctrl(char c) { return c & ctrlMask; }
+int alt(char c)  { return c | altFlag;  }
