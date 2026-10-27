@@ -62,7 +62,7 @@ int readKey() {
     int next = readByte();
     if (next == -1)  return 0x1b; // a lone Escape press
     if (next == '[') return readCsi();
-    // SS3: some terminals send arrows and Home/End this way
+    // SS3: some terminals send arrows, Home/End and F1-F4 this way
     if (next == 'O') {
         switch (readByte()) {
             case 'A': return keyUp;
@@ -71,6 +71,10 @@ int readKey() {
             case 'D': return keyLeft;
             case 'H': return keyHome;
             case 'F': return keyEnd;
+            case 'P': return keyF1;
+            case 'Q': return keyF2;
+            case 'R': return keyF3;
+            case 'S': return keyF4;
             default:  return keyNone;
         }
     }
@@ -100,7 +104,7 @@ int readUtf8(int first) {
 }
 
 // Reads the rest of an "ESC [ params final" sequence
-// Unknown sequences, such as Ctrl+arrows, are consumed to never appear as text
+// Unknown sequences are consumed to never appear as text
 int readCsi() {
     string params;
     int c;
@@ -110,23 +114,78 @@ int readCsi() {
         if (c >= 0x40 && c <= 0x7E) break;
         params ~= cast(char) c;
     }
-    switch (c) {
-        case 'A': return keyUp;
-        case 'B': return keyDown;
-        case 'C': return keyRight;
-        case 'D': return keyLeft;
-        case 'H': return keyHome;
-        case 'F': return keyEnd;
+    return csiKey(params, cast(char) c);
+}
+
+// Key for the parameters and final byte of a CSI sequence.
+// xterm sends modifiers as a second parameter
+// 1 + bitmask of Shift = 1, Alt = 2, Ctrl = 4: "1;5C" is Ctrl+Right
+int csiKey(const(char)[] params, char last) {
+    long semi = params.indexOf(';');
+    int key;
+    switch (last) {
+        case 'A': key = keyUp;    break;
+        case 'B': key = keyDown;  break;
+        case 'C': key = keyRight; break;
+        case 'D': key = keyLeft;  break;
+        case 'H': key = keyHome;  break;
+        case 'F': key = keyEnd;   break;
+        case 'P': key = keyF1;    break; // F1-F4 with modifiers, "1;2P" is Shift+F1
+        case 'Q': key = keyF2;    break;
+        case 'R': key = keyF3;    break;
+        case 'S': key = keyF4;    break;
         case '~':
-            long semi = params.indexOf(';');
             switch (semi < 0 ? params : params[0 .. semi]) {
-                case "1", "7": return keyHome;
-                case "4", "8": return keyEnd;
-                case "3": return keyDelete;
-                case "5": return keyPageUp;
-                case "6": return keyPageDown;
+                case "1", "7": key = keyHome;     break;
+                case "4", "8": key = keyEnd;      break;
+                case "3":      key = keyDelete;   break;
+                case "5":      key = keyPageUp;   break;
+                case "6":      key = keyPageDown; break;
+                case "11":     key = keyF1;       break;
+                case "12":     key = keyF2;       break;
+                case "13":     key = keyF3;       break;
+                case "14":     key = keyF4;       break;
+                case "15":     key = keyF5;       break;
+                case "17":     key = keyF6;       break;
+                case "18":     key = keyF7;       break;
+                case "19":     key = keyF8;       break;
+                case "20":     key = keyF9;       break;
+                case "21":     key = keyF10;      break;
+                case "23":     key = keyF11;      break;
+                case "24":     key = keyF12;      break;
                 default: return keyNone;
             }
+            break;
         default: return keyNone;
     }
+    if (semi < 0) return key;
+
+    int mods = 0;
+    foreach (c; params[semi + 1 .. $]) {
+        if (c < '0' || c > '9') break;
+        mods = mods * 10 + (c - '0');
+    }
+    if (mods <= 1) return key;
+    mods--;
+    if (mods & 1) key |= shiftFlag;
+    if (mods & 2) key |= altFlag;
+    if (mods & 4) key |= ctrlFlag;
+    return key;
+}
+
+unittest {
+    assert(csiKey("", 'C')     == keyRight);
+    assert(csiKey("1;1", 'C')  == keyRight);
+    assert(csiKey("1;2", 'A')  == (shiftFlag | keyUp));
+    assert(csiKey("1;3", 'D')  == (altFlag | keyLeft));
+    assert(csiKey("1;5", 'C')  == (ctrlFlag | keyRight));
+    assert(csiKey("1;8", 'H')  == (shiftFlag | altFlag | ctrlFlag | keyHome));
+    assert(csiKey("3", '~')    == keyDelete);
+    assert(csiKey("3;5", '~')  == (ctrlFlag | keyDelete));
+    assert(csiKey("1;2", 'P')  == (shiftFlag | keyF1));
+    assert(csiKey("11", '~')   == keyF1);
+    assert(csiKey("15", '~')   == keyF5);
+    assert(csiKey("24;6", '~') == (shiftFlag | ctrlFlag | keyF12));
+    assert(csiKey("16", '~')   == keyNone);
+    assert(csiKey("", 'Z')     == keyNone);
 }
