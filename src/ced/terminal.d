@@ -60,7 +60,16 @@ int readKey() {
     if (c != 0x1b) return readUtf8(c);
 
     int next = readByte();
-    if (next == -1)  return 0x1b; // a lone Escape press
+    if (next == -1)   return 0x1b; // a lone Escape press
+    if (next != 0x1b) return readEscape(next);
+    // Some terminals send Alt with a key that is a sequence itself as an extra Escape: "ESC ESC [ C"
+    next = readByte();
+    int key = next == -1 ? 0x1b : readEscape(next);
+    return key == keyNone ? keyNone : altFlag | key;
+}
+
+// Reads the key of an Escape sequence whose second byte is `next`
+int readEscape(int next) {
     if (next == '[') return readCsi();
     // SS3: some terminals send arrows, Home/End and F1-F4 this way
     if (next == 'O') {
