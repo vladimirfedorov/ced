@@ -25,6 +25,11 @@ final class Editor {
     string message;
     bool quitPending;               // Alt-Q was pressed once with unsaved changes
     bool running = true;
+    Keymap keymap;
+
+    this() {
+        keymap = defaultKeymap();
+    }
 
     void open(string path) {
         filename = path;
@@ -82,14 +87,12 @@ final class Editor {
         quitPending = false;
         message = null;
 
-        const Cmd* cmd = key in defaultKeymap;
-        if (cmd is null) {
-            // Unbound printable characters are typed; other control and Alt keys are ignored.
-            if (key >= 0x20 && key != 0x7F && key < 0x110000) insertChar(cast(dchar) key);
-            return;
-        }
-
-        final switch (*cmd) {
+        Cmd cmd = keymap.lookup("text", key);
+        final switch (cmd) {
+            case Cmd.none:
+                // display unbound printable characters
+                if (key >= 0x20 && key != 0x7F && key < 0x110000) insertChar(cast(dchar) key);
+                break;
             case Cmd.quit:
                 if (dirty && !confirmQuit) {
                     message = "Unsaved changes, Alt+q again to quit without saving, Alt+s to save.";
@@ -112,7 +115,7 @@ final class Editor {
                 break;
             case Cmd.cursorLeft, Cmd.cursorRight, Cmd.cursorUp, Cmd.cursorDown,
                  Cmd.lineStart, Cmd.lineEnd, Cmd.pageUp, Cmd.pageDown:
-                moveCursor(*cmd);
+                moveCursor(cmd);
                 break;
             case Cmd.insertTab:
                 insertChar('\t');

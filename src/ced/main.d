@@ -6,11 +6,13 @@
 // Keys:   arrows, Home/End, PgUp/PgDn  move the cursor
 //         Alt+s or Ctrl+s  save
 //         Alt+q or Ctrl+q  quit; asks again if there are unsaved changes
+// Custom keys: ~/.config/ced/keys
 
 module ced.main;
 
 import core.sys.posix.unistd : isatty, STDIN_FILENO, STDOUT_FILENO;
 import std.stdio : stderr;
+import ced.commands;
 import ced.editor;
 
 int main(string[] args) {
@@ -25,6 +27,7 @@ int main(string[] args) {
     try {
         Editor editor = new Editor;
         editor.open(args[1]);
+        if (string error = loadKeys(editor.keymap)) editor.message = error;
         editor.run();
     } catch (Exception e) {
         stderr.writeln("ced: ", e.msg);
