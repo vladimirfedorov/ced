@@ -1,4 +1,4 @@
-module ced.editor;
+module ve.editor;
 
 import std.algorithm : canFind, map, min;
 import std.algorithm.mutation : remove;
@@ -7,9 +7,9 @@ import std.conv : to;
 import std.file : exists, readText, writeFile = write;
 import std.format : format;
 import std.utf : UTFException;
-import ced.keys;
-import ced.terminal;
-import ced.commands;
+import ve.keys;
+import ve.terminal;
+import ve.commands;
 
 enum tabStop = 4;
 

@@ -1,2 +1,2 @@
-ldc2 -O -i -Isrc src/ced/main.d -of=ced
-rm ced.o
+ldc2 -O -i -Isrc src/ve/main.d -of=ve
+rm ve.o

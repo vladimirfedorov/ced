@@ -1,4 +1,4 @@
-module ced.keys;
+module ve.keys;
 
 import std.utf : decode, UTFException;
 

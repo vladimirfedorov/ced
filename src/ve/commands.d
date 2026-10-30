@@ -1,4 +1,4 @@
-module ced.commands;
+module ve.commands;
 
 import std.algorithm.searching : canFind;
 import std.array : split;
@@ -7,7 +7,7 @@ import std.file : exists, readText;
 import std.format : format;
 import std.process : environment;
 import std.string : lineSplitter, strip;
-import ced.keys;
+import ve.keys;
 
 // Editor actions that keys are bound to
 enum Cmd {
@@ -63,11 +63,11 @@ Keymap defaultKeymap() {
     return keymap;
 }
 
-// Path for ~/.config/ced/keys
+// Path for ~/.config/ve/keys
 string keysPath() {
     string dir = environment.get("XDG_CONFIG_HOME");
     if (dir.length == 0) dir = environment.get("HOME", "") ~ "/.config";
-    return dir ~ "/ced/keys";
+    return dir ~ "/ve/keys";
 }
 
 // Applies the keys file

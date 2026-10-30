@@ -1,4 +1,4 @@
-module ced.terminal;
+module ve.terminal;
 
 import core.stdc.errno : errno, EAGAIN, EINTR;
 import core.sys.posix.sys.ioctl : ioctl, winsize, TIOCGWINSZ;
@@ -6,7 +6,7 @@ import core.sys.posix.termios;
 import core.sys.posix.unistd : read, write, STDIN_FILENO, STDOUT_FILENO;
 import std.string : indexOf;
 import std.utf : decode, UTFException;
-import ced.keys;
+import ve.keys;
 
 private termios origTermios;
 
